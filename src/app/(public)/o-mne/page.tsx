@@ -7,7 +7,7 @@ import { createClient } from "@/lib/supabase/server";
 export const metadata: Metadata = generatePageMetadata({
   title: "O mně",
   description:
-    "Jsem Kristina, fotografka z lásky k zachycování autentických momentů. Přečtěte si můj příběh.",
+    "Jsem Kristýna, fotografka z lásky k zachycování autentických momentů. Přečtěte si můj příběh.",
   pathname: "/o-mne",
 });
 
@@ -37,7 +37,7 @@ export default async function AboutPage() {
             {settings?.about_image_url ? (
               <Image
                 src={settings.about_image_url}
-                alt="Kristina - fotografka"
+                alt="Kristýna - fotografka"
                 fill
                 className="object-cover"
                 sizes="(max-width: 768px) 100vw, 50vw"
@@ -61,7 +61,7 @@ export default async function AboutPage() {
             ) : (
               <>
                 <p className="text-lg leading-relaxed text-muted-foreground">
-                  Jsem Kristina a fotím už od dob, kdy jsem poprvé vzala do
+                  Jsem Kristýna a fotím už od dob, kdy jsem poprvé vzala do
                   ruky foťák. Miluju zachycovat autentické momenty — emoce,
                   smích, slzy štěstí, energii živého koncertu.
                 </p>

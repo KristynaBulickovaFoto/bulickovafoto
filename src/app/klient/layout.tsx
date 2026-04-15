@@ -6,7 +6,7 @@ import { createClient } from "@/lib/supabase/server";
 import { logout } from "@/actions/auth";
 
 export const metadata = {
-  title: "Klientská zóna | Kristina Foto",
+  title: "Klientská zóna | Kristýna Foto",
   robots: { index: false, follow: false },
 };
 
@@ -33,7 +33,7 @@ export default async function ClientLayout({
         <div className="mx-auto flex max-w-5xl items-center justify-between px-4 py-3">
           <div className="flex items-center gap-3">
             <Link href="/" className="text-lg font-bold tracking-tight">
-              <span className="text-foreground">Kristina</span>
+              <span className="text-foreground">Kristýna</span>
               <span className="text-primary">Foto</span>
             </Link>
             <Separator orientation="vertical" className="h-5" />

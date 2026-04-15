@@ -46,10 +46,10 @@ export async function submitInquiry(
       const { render } = await import("@react-email/components");
 
       const resend = new Resend(process.env.RESEND_API_KEY);
-      const fromEmail = process.env.RESEND_FROM_EMAIL ?? "noreply@kristinafoto.cz";
+      const fromEmail = process.env.RESEND_FROM_EMAIL ?? "noreply@kristynafoto.cz";
       const adminEmail = process.env.ADMIN_EMAIL ?? "bulickovak@email.cz";
 
-      // Notification to Kristina
+      // Notification to Kristýna
       const notificationHtml = await render(
         InquiryNotification({
           name: parsed.data.name,
@@ -79,7 +79,7 @@ export async function submitInquiry(
       await resend.emails.send({
         from: fromEmail,
         to: parsed.data.email,
-        subject: "Děkuji za poptávku! | Kristina Foto",
+        subject: "Děkuji za poptávku! | Kristýna Foto",
         html: confirmationHtml,
       });
     } catch (emailError) {

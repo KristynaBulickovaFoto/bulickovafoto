@@ -1,7 +1,7 @@
 import { AdminSidebar } from "@/components/layout/AdminSidebar";
 
 export const metadata = {
-  title: "Admin | Kristina Foto",
+  title: "Admin | Kristýna Foto",
   robots: { index: false, follow: false },
 };
 

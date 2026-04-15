@@ -24,7 +24,7 @@ export function MobileNav() {
       </SheetTrigger>
       <SheetContent side="right" className="w-[320px] bg-background p-0">
         <SheetTitle className="px-6 pt-6 text-lg font-bold">
-          <span className="text-foreground">Kristina</span>
+          <span className="text-foreground">Kristýna</span>
           <span className="text-primary">Foto</span>
         </SheetTitle>
 

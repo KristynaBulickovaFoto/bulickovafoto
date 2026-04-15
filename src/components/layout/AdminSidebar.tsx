@@ -40,7 +40,7 @@ export function AdminSidebar() {
       {/* Logo */}
       <div className="flex items-center gap-2 px-6 py-4">
         <Link href="/admin" className="text-lg font-bold tracking-tight">
-          <span className="text-sidebar-foreground">Kristina</span>
+          <span className="text-sidebar-foreground">Kristýna</span>
           <span className="text-sidebar-primary">Foto</span>
         </Link>
         <span className="rounded-md bg-sidebar-primary/10 px-2 py-0.5 text-xs font-medium text-sidebar-primary">

@@ -96,7 +96,7 @@ export default function LoginPage() {
     <Card className="w-full max-w-sm">
       <CardHeader className="text-center">
         <CardTitle className="text-2xl">
-          <span className="text-foreground">Kristina</span>
+          <span className="text-foreground">Kristýna</span>
           <span className="text-primary">Foto</span>
         </CardTitle>
         <CardDescription>Přihlaste se ke svému účtu</CardDescription>

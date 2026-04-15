@@ -1,5 +1,5 @@
-export const SITE_NAME = "Kristina Foto";
-export const SITE_URL = "https://kristinafoto.cz";
+export const SITE_NAME = "Kristýna Foto";
+export const SITE_URL = "https://kristynafoto.cz";
 export const SITE_DESCRIPTION =
   "Fotografka svateb, koncertů a portrétů. Přerov & okolí. Autentické momenty, profesionální přístup.";
 

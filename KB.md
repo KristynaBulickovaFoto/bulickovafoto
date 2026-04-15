@@ -1,8 +1,14 @@
-# Výzkum online stopy fotografky a návrh webu kristinafoto.cz
+# Výzkum online stopy fotografky a návrh webu kristynafoto.cz
 
 ## Současná online stopa a konzistence značky
 
-Z veřejně dostupných zdrojů je patrné, že Kristýna Bulíčková dnes funguje primárně přes sociální sítě a externí galerie, a už v minulosti měla jednoduchý osobní web. Na starším webu (vytvořeném pomocí entity["company","Webnode","cms platform"]) jsou dohledatelné základní kontaktní údaje a deklarovaný okruh působnosti (např. entity["city","Zlín","cz"], entity["city","Přerov","cz"], entity["city","Olomouc","cz"] a okolí), včetně telefonu a e-mailu. citeturn8view3turn3view0
+Z veřejně dostupných zdrojů je patrné, že Kristýna Bulíčková dnes funguje primárně přes sociální sítě a externí galerie, a už v minulosti měla jednoduchý osobní web. Hlavní kontaktní a identifikační údaje pro web (doména kristynafoto.cz) jsou:
+- **Instagram:** fotografkakristynabulickova
+- **Facebook:** https://www.facebook.com/kristynafoto
+- **E-mail:** bulickovak@email.cz
+- **Telefon:** 736 121 170
+
+Na starším webu (vytvořeném pomocí entity["company","Webnode","cms platform"]) je dále deklarovaný okruh působnosti (např. entity["city","Zlín","cz"], entity["city","Přerov","cz"], entity["city","Olomouc","cz"] a okolí). citeturn8view3turn3view0
 
 Ve vyhledávači je vidět i facebooková stránka pod názvem „Fotografka Kristýna Bulíčková“ s uvedeným zaměřením na rodinné, těhotenské, svatební, párové a portrétní focení (a veřejně viditelnými metrikami profilu jako „likes“ a „talking about“, které se mohou v čase měnit). citeturn5search12turn13search3
 
@@ -28,7 +34,7 @@ Jak to přetavit do značky (aby web budoval důvěru a zároveň neředil nabí
 - Základní positioning může být postavený jako „dvojdomá“ specializace: **svatby (příběh, emoce, dokument)** + **koncerty/kapely (energie, světla, moment)**, doplněná o portrét/rodinu jako stabilní „mezi-sezónní“ produkt. citeturn2search2turn5search12turn19view2
 - Web musí „ukázat důkaz“ rychle: ideálně už na úvodu mít dvě jasné vstupní brány (Svatby / Kapely) – protože lidé se na webu typicky rozhodují rychle a skenují místo čtení. citeturn26view0turn26view2
 
-## Struktura webu pro kristinafoto.cz
+## Struktura webu pro kristynafoto.cz
 
 Cíl webu, jak ho popisujete: být **brandový hub** a **konverzní nástroj** (návštěvník má během pár minut pochopit co fotí, vidět kvalitu, a mít snadnou cestu k poptávce).
 
@@ -45,7 +51,7 @@ Doporučený sitemap (minimalistický, ale SEO-čitelný):
 - **O mně**: krátký příběh + fotka + hodnoty + „jak pracuji“ (aby se zvedla důvěra). citeturn19view2  
 - **Reference**: krátké citace klientů / pořadatelů (autentické, dohledatelné) + loga/zmínky (pokud máte souhlas).  
 - **Blog / články** (volitelné, ale silné pro SEO): „Jak vybrat svatebního fotografa“, „Jak se připravit na párové focení“, „Co potřebuje pořadatel od fotografa na koncert“ apod. citeturn18view1  
-- **Kontakt**: formulář + rychlý kontakt (telefon, e-mail) + jednoduché „kde fotím“. citeturn8view3turn3view0
+- **Kontakt**: formulář + rychlý kontakt (e-mail: bulickovak@email.cz, telefon: 736 121 170) a odkazy na sítě (IG, FB) + jednoduché „kde fotím“. citeturn8view3turn3view0
 
 Technická poznámka k doméně: pro registraci .cz domény je potřeba vybrat registrátora (registrace se nedělá přímo u entity["organization","CZ.NIC","cz domain registry"]), a dostupnost domény se standardně ověřuje přes WHOIS vyhledávání. citeturn25search15turn25search3
 
@@ -60,7 +66,7 @@ Formulář by neměl být jen „jméno/e-mail“, ale měl by sbírat minimum i
 typ focení (svatba/kapela/portrét), datum, místo, časový rozsah, očekávání (reportáž vs. stylizace), a preferovaný kontakt. Tím se snižuje potřeba dlouhého dopisování a roste šance na rychlou konverzi.
 
 **Rychlé kontakty jedním klikem**  
-Na webu je vhodné opřít se o existující veřejný kontakt (telefon + e-mail), ideálně viditelně už v hlavičce a opakovaně v CTA blocích. citeturn8view3turn3view0
+Na webu je vhodné opřít se o definované kontakty (telefon: 736 121 170 a e-mail: bulickovak@email.cz), ideálně viditelně už v hlavičce a opakovaně v CTA blocích. K tomu přidat i přímé prokliky na Instagram a Facebook. citeturn8view3turn3view0
 
 **Soukromé galerie pro klienty / kapely**  
 Tady máte výhodu: platforma, kterou už používá, má funkce typu veřejné/soukromé i heslem chráněné album a sdílení přes odkazy. citeturn20view0  

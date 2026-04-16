@@ -7,7 +7,7 @@ Disallow: /login
 Disallow: /api
 
 # Host
-Host: http://localhost:3000
+Host: https://www.kristynafoto.cz
 
 # Sitemaps
-Sitemap: http://localhost:3000/sitemap.xml
+Sitemap: https://www.kristynafoto.cz/sitemap.xml

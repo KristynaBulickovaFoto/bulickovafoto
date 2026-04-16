@@ -13,10 +13,10 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { blogPostSchema, type BlogPostValues } from "@/lib/validations";
+import { testimonialSchema, type TestimonialValues } from "@/lib/validations";
 import { createClient } from "@/lib/supabase/client";
 
-export default function AdminBlogEditPage() {
+export default function AdminTestimonialEditPage() {
   const params = useParams();
   const router = useRouter();
   const id = params.id as string;
@@ -32,9 +32,9 @@ export default function AdminBlogEditPage() {
     control,
     reset,
     formState: { errors },
-  } = useForm<BlogPostValues>({
-    resolver: zodResolver(blogPostSchema),
-    defaultValues: { is_published: false },
+  } = useForm<TestimonialValues>({
+    resolver: zodResolver(testimonialSchema),
+    defaultValues: { is_published: true },
   });
   const isPublished = useWatch({ control, name: "is_published" });
 
@@ -43,19 +43,18 @@ export default function AdminBlogEditPage() {
   useEffect(() => {
     async function load() {
       if (!isNew) {
-        const { data: post } = await supabase
-          .from("blog_posts")
+        const { data } = await supabase
+          .from("testimonials")
           .select("*")
           .eq("id", id)
           .single();
-        if (post) {
+        if (data) {
           reset({
-            title: post.title,
-            slug: post.slug,
-            excerpt: post.excerpt ?? "",
-            is_published: post.is_published,
-            seo_title: post.seo_title ?? "",
-            seo_description: post.seo_description ?? "",
+            author_name: data.author_name,
+            author_role: data.author_role ?? "",
+            content: data.content,
+            rating: data.rating ?? undefined,
+            is_published: data.is_published,
           });
         }
       }
@@ -64,30 +63,26 @@ export default function AdminBlogEditPage() {
     load();
   }, [id, isNew, reset, supabase]);
 
-  async function onSubmit(data: BlogPostValues) {
+  async function onSubmit(data: TestimonialValues) {
     setIsSaving(true);
     const payload = {
-      title: data.title,
-      slug: data.slug,
-      excerpt: data.excerpt || null,
+      author_name: data.author_name,
+      author_role: data.author_role || null,
+      content: data.content,
+      rating: data.rating ?? null,
       is_published: data.is_published,
-      published_at: data.is_published ? new Date().toISOString() : null,
-      seo_title: data.seo_title || null,
-      seo_description: data.seo_description || null,
-      content: {},
-      updated_at: new Date().toISOString(),
     };
 
     if (isNew) {
-      const { error } = await supabase.from("blog_posts").insert(payload);
-      if (error) toast.error("Nepodařilo se vytvořit článek.");
+      const { error } = await supabase.from("testimonials").insert(payload);
+      if (error) toast.error("Nepodařilo se vytvořit referenci.");
       else {
-        toast.success("Článek vytvořen!");
-        router.push("/admin/blog");
+        toast.success("Reference vytvořena!");
+        router.push("/admin/reference");
       }
     } else {
       const { error } = await supabase
-        .from("blog_posts")
+        .from("testimonials")
         .update(payload)
         .eq("id", id);
       if (error) toast.error("Nepodařilo se uložit.");
@@ -97,15 +92,15 @@ export default function AdminBlogEditPage() {
   }
 
   async function onDelete() {
-    if (!confirm("Opravdu smazat tento článek?")) return;
+    if (!confirm("Opravdu smazat tuto referenci?")) return;
     const { error } = await supabase
-      .from("blog_posts")
+      .from("testimonials")
       .delete()
       .eq("id", id);
-    if (error) toast.error("Nepodařilo se smazat článek.");
+    if (error) toast.error("Nepodařilo se smazat.");
     else {
-      toast.success("Článek smazán!");
-      router.push("/admin/blog");
+      toast.success("Reference smazána!");
+      router.push("/admin/reference");
     }
   }
 
@@ -120,11 +115,15 @@ export default function AdminBlogEditPage() {
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-3">
-        <Button variant="ghost" size="icon" render={<Link href="/admin/blog" />}>
+        <Button
+          variant="ghost"
+          size="icon"
+          render={<Link href="/admin/reference" />}
+        >
           <ArrowLeft className="h-4 w-4" />
         </Button>
         <h1 className="text-2xl font-bold">
-          {isNew ? "Nový článek" : "Upravit článek"}
+          {isNew ? "Nová reference" : "Upravit referenci"}
         </h1>
         {!isNew && (
           <Button
@@ -143,30 +142,45 @@ export default function AdminBlogEditPage() {
           <div className="space-y-6 lg:col-span-2">
             <Card>
               <CardHeader>
-                <CardTitle>Obsah</CardTitle>
+                <CardTitle>Obsah reference</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="title">Název *</Label>
-                  <Input id="title" {...register("title")} />
-                  {errors.title && (
-                    <p className="text-xs text-destructive">{errors.title.message}</p>
+                  <Label htmlFor="author_name">Jméno autora *</Label>
+                  <Input id="author_name" {...register("author_name")} />
+                  {errors.author_name && (
+                    <p className="text-xs text-destructive">
+                      {errors.author_name.message}
+                    </p>
                   )}
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="slug">Slug *</Label>
-                  <Input id="slug" {...register("slug")} />
-                  {errors.slug && (
-                    <p className="text-xs text-destructive">{errors.slug.message}</p>
+                  <Label htmlFor="author_role">Role / typ focení</Label>
+                  <Input
+                    id="author_role"
+                    placeholder="např. Nevěsta, Kapelník..."
+                    {...register("author_role")}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="content">Text reference *</Label>
+                  <Textarea id="content" rows={6} {...register("content")} />
+                  {errors.content && (
+                    <p className="text-xs text-destructive">
+                      {errors.content.message}
+                    </p>
                   )}
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="excerpt">Úryvek</Label>
-                  <Textarea id="excerpt" rows={3} {...register("excerpt")} />
+                  <Label htmlFor="rating">Hodnocení (1–5)</Label>
+                  <Input
+                    id="rating"
+                    type="number"
+                    min={1}
+                    max={5}
+                    {...register("rating", { valueAsNumber: true })}
+                  />
                 </div>
-                <p className="text-xs text-muted-foreground">
-                  Tiptap WYSIWYG editor bude doplněn v další fázi.
-                </p>
               </CardContent>
             </Card>
           </div>

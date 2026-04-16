@@ -57,7 +57,8 @@ CREATE TABLE portfolio_galleries (
   sort_order INT DEFAULT 0,
   seo_title TEXT,
   seo_description TEXT,
-  created_at TIMESTAMPTZ DEFAULT NOW()
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
 -- Portfolio fotky
@@ -137,28 +138,29 @@ CREATE TABLE blog_posts (
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- Obsazene terminy (kalendar dostupnosti)
-CREATE TABLE booked_dates (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  date DATE NOT NULL,
-  label TEXT,
-  is_confirmed BOOLEAN DEFAULT true,
-  created_at TIMESTAMPTZ DEFAULT NOW()
-);
-
 -- Poptavky z kontaktniho formulare
 CREATE TABLE inquiries (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   name TEXT NOT NULL,
   email TEXT NOT NULL,
   phone TEXT,
-  shoot_type TEXT NOT NULL,
+  shoot_type TEXT NOT NULL CHECK (shoot_type IN ('wedding', 'concert', 'portrait', 'couple', 'family', 'other')),
   preferred_date DATE,
   location TEXT,
   duration TEXT,
   message TEXT,
-  preferred_contact TEXT DEFAULT 'email',
+  preferred_contact TEXT DEFAULT 'email' CHECK (preferred_contact IN ('email', 'phone', 'whatsapp')),
   status TEXT DEFAULT 'new' CHECK (status IN ('new', 'read', 'replied', 'booked', 'archived')),
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Obsazene terminy (kalendar dostupnosti)
+CREATE TABLE booked_dates (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  date DATE NOT NULL,
+  inquiry_id UUID REFERENCES inquiries(id) ON DELETE SET NULL,
+  label TEXT,
+  is_confirmed BOOLEAN DEFAULT true,
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
@@ -320,6 +322,7 @@ CREATE INDEX idx_client_gallery_links_gallery ON client_gallery_links(gallery_id
 CREATE INDEX idx_blog_posts_published ON blog_posts(is_published, published_at DESC) WHERE is_published = true;
 CREATE INDEX idx_blog_posts_slug ON blog_posts(slug);
 CREATE INDEX idx_booked_dates_date ON booked_dates(date);
+CREATE INDEX idx_booked_dates_inquiry ON booked_dates(inquiry_id) WHERE inquiry_id IS NOT NULL;
 CREATE INDEX idx_inquiries_status ON inquiries(status);
 CREATE INDEX idx_inquiries_created ON inquiries(created_at DESC);
 
@@ -333,3 +336,91 @@ ON CONFLICT (id) DO NOTHING;
 INSERT INTO storage.buckets (id, name, public)
 VALUES ('avatars', 'avatars', true)
 ON CONFLICT (id) DO NOTHING;
+
+-- ============================================
+-- Auto-update updated_at trigger
+-- ============================================
+CREATE OR REPLACE FUNCTION update_updated_at()
+RETURNS TRIGGER AS $$
+BEGIN
+  NEW.updated_at = NOW();
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER set_updated_at BEFORE UPDATE ON portfolio_galleries
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at();
+
+CREATE TRIGGER set_updated_at BEFORE UPDATE ON blog_posts
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at();
+
+CREATE TRIGGER set_updated_at BEFORE UPDATE ON site_settings
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at();
+
+-- ============================================
+-- Sync profile email on auth.users email change
+-- ============================================
+CREATE OR REPLACE FUNCTION handle_user_update()
+RETURNS TRIGGER AS $$
+BEGIN
+  UPDATE public.profiles
+  SET email = NEW.email
+  WHERE id = NEW.id;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+CREATE TRIGGER on_auth_user_updated
+  AFTER UPDATE OF email ON auth.users
+  FOR EACH ROW EXECUTE FUNCTION handle_user_update();
+
+-- ============================================
+-- Storage RLS Policies
+-- ============================================
+
+-- Portfolio bucket: public read, admin upload/delete
+CREATE POLICY "Anyone can view portfolio images"
+  ON storage.objects FOR SELECT
+  USING (bucket_id = 'portfolio');
+
+CREATE POLICY "Admins can upload portfolio images"
+  ON storage.objects FOR INSERT
+  WITH CHECK (bucket_id = 'portfolio' AND is_admin());
+
+CREATE POLICY "Admins can update portfolio images"
+  ON storage.objects FOR UPDATE
+  USING (bucket_id = 'portfolio' AND is_admin());
+
+CREATE POLICY "Admins can delete portfolio images"
+  ON storage.objects FOR DELETE
+  USING (bucket_id = 'portfolio' AND is_admin());
+
+-- Avatars bucket: own avatar read/write, admin full
+CREATE POLICY "Anyone can view avatars"
+  ON storage.objects FOR SELECT
+  USING (bucket_id = 'avatars');
+
+CREATE POLICY "Users can upload own avatar"
+  ON storage.objects FOR INSERT
+  WITH CHECK (
+    bucket_id = 'avatars'
+    AND (storage.foldername(name))[1] = auth.uid()::text
+  );
+
+CREATE POLICY "Users can update own avatar"
+  ON storage.objects FOR UPDATE
+  USING (
+    bucket_id = 'avatars'
+    AND (storage.foldername(name))[1] = auth.uid()::text
+  );
+
+CREATE POLICY "Users can delete own avatar"
+  ON storage.objects FOR DELETE
+  USING (
+    bucket_id = 'avatars'
+    AND (storage.foldername(name))[1] = auth.uid()::text
+  );
+
+CREATE POLICY "Admins can manage all avatars"
+  ON storage.objects FOR ALL
+  USING (bucket_id = 'avatars' AND is_admin());

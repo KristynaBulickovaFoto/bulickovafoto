@@ -19,13 +19,6 @@ export const contactFormSchema = z.object({
 
 export type ContactFormValues = z.infer<typeof contactFormSchema>;
 
-export const loginSchema = z.object({
-  email: z.string().email("Zadejte platný e-mail"),
-  password: z.string().min(6, "Heslo musí mít alespoň 6 znaků"),
-});
-
-export type LoginValues = z.infer<typeof loginSchema>;
-
 export const portfolioGallerySchema = z.object({
   title: z.string().min(2, "Název musí mít alespoň 2 znaky"),
   slug: z

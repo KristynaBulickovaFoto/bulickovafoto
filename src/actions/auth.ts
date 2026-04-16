@@ -3,42 +3,33 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 
-export async function login(formData: FormData) {
+export async function sendMagicLink(
+  email: string,
+  redirectTo?: string | null
+): Promise<{ success?: boolean; error?: string }> {
   const supabase = await createClient();
 
-  const email = formData.get("email") as string;
-  const password = formData.get("password") as string;
-  const redirectTo = (formData.get("redirect") as string) || null;
+  const callbackUrl = new URL(
+    "/auth/callback",
+    process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000"
+  );
+  if (redirectTo) {
+    callbackUrl.searchParams.set("redirect", redirectTo);
+  }
 
-  const { error } = await supabase.auth.signInWithPassword({
+  const { error } = await supabase.auth.signInWithOtp({
     email,
-    password,
+    options: {
+      emailRedirectTo: callbackUrl.toString(),
+    },
   });
 
   if (error) {
-    return { error: "Neplatný e-mail nebo heslo" };
+    console.error("Magic link error:", error);
+    return { error: "Nepodařilo se odeslat přihlašovací odkaz." };
   }
 
-  // Determine redirect based on role
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (user) {
-    const { data: profile } = await supabase
-      .from("profiles")
-      .select("role")
-      .eq("id", user.id)
-      .single();
-
-    if (redirectTo) {
-      redirect(redirectTo);
-    }
-
-    redirect(profile?.role === "admin" ? "/admin" : "/klient");
-  }
-
-  redirect("/");
+  return { success: true };
 }
 
 export async function logout() {

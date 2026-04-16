@@ -82,6 +82,7 @@ export type Database = {
           seo_title: string | null;
           seo_description: string | null;
           created_at: string;
+          updated_at: string;
         };
         Insert: {
           id?: string;
@@ -98,6 +99,7 @@ export type Database = {
           seo_title?: string | null;
           seo_description?: string | null;
           created_at?: string;
+          updated_at?: string;
         };
         Update: {
           id?: string;
@@ -114,6 +116,7 @@ export type Database = {
           seo_title?: string | null;
           seo_description?: string | null;
           created_at?: string;
+          updated_at?: string;
         };
         Relationships: [
           {
@@ -366,6 +369,7 @@ export type Database = {
         Row: {
           id: string;
           date: string;
+          inquiry_id: string | null;
           label: string | null;
           is_confirmed: boolean;
           created_at: string;
@@ -373,6 +377,7 @@ export type Database = {
         Insert: {
           id?: string;
           date: string;
+          inquiry_id?: string | null;
           label?: string | null;
           is_confirmed?: boolean;
           created_at?: string;
@@ -380,11 +385,20 @@ export type Database = {
         Update: {
           id?: string;
           date?: string;
+          inquiry_id?: string | null;
           label?: string | null;
           is_confirmed?: boolean;
           created_at?: string;
         };
-        Relationships: [];
+        Relationships: [
+          {
+            foreignKeyName: "booked_dates_inquiry_id_fkey";
+            columns: ["inquiry_id"];
+            isOneToOne: false;
+            referencedRelation: "inquiries";
+            referencedColumns: ["id"];
+          },
+        ];
       };
       inquiries: {
         Row: {

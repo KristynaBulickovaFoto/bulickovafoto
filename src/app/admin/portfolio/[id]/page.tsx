@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Loader2, Save, ArrowLeft } from "lucide-react";
+import { Loader2, Save, ArrowLeft, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
@@ -132,6 +132,19 @@ export default function AdminPortfolioEditPage() {
     setIsSaving(false);
   }
 
+  async function onDelete() {
+    if (!confirm("Opravdu smazat tuto galerii? Smaže se i všechny fotky v ní.")) return;
+    const { error } = await supabase
+      .from("portfolio_galleries")
+      .delete()
+      .eq("id", id);
+    if (error) toast.error("Nepodařilo se smazat galerii.");
+    else {
+      toast.success("Galerie smazána!");
+      router.push("/admin/portfolio");
+    }
+  }
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-20">
@@ -149,6 +162,16 @@ export default function AdminPortfolioEditPage() {
         <h1 className="text-2xl font-bold">
           {isNew ? "Nová galerie" : "Upravit galerii"}
         </h1>
+        {!isNew && (
+          <Button
+            variant="ghost"
+            size="icon"
+            className="ml-auto text-destructive hover:text-destructive"
+            onClick={onDelete}
+          >
+            <Trash2 className="h-4 w-4" />
+          </Button>
+        )}
       </div>
 
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">

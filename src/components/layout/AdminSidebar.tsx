@@ -19,6 +19,7 @@ import { cn } from "@/lib/utils";
 import { ADMIN_NAV_ITEMS } from "@/lib/constants";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
+import { logout } from "@/actions/auth";
 
 const iconMap = {
   LayoutDashboard,
@@ -88,7 +89,7 @@ export function AdminSidebar() {
           <ArrowLeft className="h-4 w-4" />
           Zpět na web
         </Link>
-        <form action="/api/auth/signout" method="POST">
+        <form action={logout}>
           <Button
             type="submit"
             variant="ghost"

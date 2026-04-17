@@ -15,7 +15,7 @@ export default function NotFound() {
           <p className="mt-2 text-muted-foreground">
             Omlouváme se, ale stránka, kterou hledáte, neexistuje.
           </p>
-          <Button render={<Link href="/" />} className="mt-6">
+          <Button nativeButton={false} render={<Link href="/" />} className="mt-6">
             <ArrowLeft className="mr-2 h-4 w-4" />
             Zpět na úvod
           </Button>

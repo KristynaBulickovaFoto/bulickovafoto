@@ -128,6 +128,7 @@ export default function AdminClientsPage() {
                 <Button
                   variant="ghost"
                   size="sm"
+                  nativeButton={false}
                   render={<Link href={`/admin/klienti/${client.id}`} />}
                 >
                   Detail

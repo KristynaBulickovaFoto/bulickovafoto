@@ -1,3 +1,4 @@
+import { redirect } from "next/navigation";
 import Link from "next/link";
 import { LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -20,10 +21,14 @@ export default async function ClientLayout({
     data: { user },
   } = await supabase.auth.getUser();
 
+  if (!user) {
+    redirect("/login?redirect=/klient");
+  }
+
   const { data: profile } = await supabase
     .from("profiles")
     .select("full_name")
-    .eq("id", user?.id ?? "")
+    .eq("id", user.id)
     .single();
 
   return (

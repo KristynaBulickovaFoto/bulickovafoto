@@ -88,8 +88,14 @@ export function Header() {
           ))}
         </ul>
 
-        {/* CTA + Mobile */}
+        {/* CTA + Portal + Mobile */}
         <div className="flex items-center gap-3">
+          <Link
+            href="/login"
+            className="hidden font-nav text-[13px] font-medium tracking-wide text-foreground/55 transition-colors duration-200 hover:text-primary sm:inline-flex"
+          >
+            Portál
+          </Link>
           <Link
             href="/kontakt"
             className="hidden rounded-full bg-primary px-6 py-2.5 font-nav text-xs font-semibold tracking-wide text-primary-foreground shadow-sm transition-all duration-200 hover:bg-primary/90 hover:shadow-md sm:inline-flex"

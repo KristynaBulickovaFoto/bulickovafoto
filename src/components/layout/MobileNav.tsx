@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Menu, Phone, Mail } from "lucide-react";
+import { Menu, Phone, Mail, LogIn } from "lucide-react";
 import { Sheet, SheetContent, SheetTrigger, SheetTitle } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
@@ -68,6 +68,17 @@ export function MobileNav() {
               className="block w-full rounded-full bg-primary px-4 py-2.5 text-center text-sm font-medium text-primary-foreground shadow-md transition-colors hover:bg-primary/90"
             >
               Nezávazná poptávka
+            </Link>
+          </div>
+
+          <div className="px-6">
+            <Link
+              href="/login"
+              onClick={() => setOpen(false)}
+              className="flex items-center gap-2 text-sm font-medium text-muted-foreground transition-colors hover:text-primary"
+            >
+              <LogIn className="h-4 w-4" />
+              Portál
             </Link>
           </div>
 

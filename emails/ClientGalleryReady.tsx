@@ -7,25 +7,32 @@ import {
   Text,
   Heading,
   Hr,
-  Img,
   Link,
+  Button,
+  Img,
   Preview,
 } from "@react-email/components";
 
-type InquiryConfirmationProps = {
-  name: string;
+type ClientGalleryReadyProps = {
+  clientName: string;
+  galleryTitle: string;
+  galleryDescription?: string | null;
+  portalUrl: string;
 };
 
 const SITE_URL =
   process.env.NEXT_PUBLIC_SITE_URL ?? "https://www.kristynafoto.cz";
 
-export default function InquiryConfirmation({
-  name,
-}: InquiryConfirmationProps) {
+export default function ClientGalleryReady({
+  clientName,
+  galleryTitle,
+  galleryDescription,
+  portalUrl,
+}: ClientGalleryReadyProps) {
   return (
     <Html lang="cs">
       <Head />
-      <Preview>Děkuji za vaši poptávku!</Preview>
+      <Preview>Vaše galerie {galleryTitle} je připravená</Preview>
       <Body style={body}>
         <Container style={container}>
           <Section style={accentBar} />
@@ -40,31 +47,35 @@ export default function InquiryConfirmation({
           </Section>
 
           <Section style={contentSection}>
-            <Heading style={heading}>Děkuji za poptávku!</Heading>
+            <Heading style={heading}>Vaše fotky jsou připravené!</Heading>
 
-            <Text style={text}>Ahoj {name},</Text>
-
-            <Text style={text}>
-              děkuji za vaši poptávku. Přijala jsem ji a ozvu se vám co
-              nejdříve — většinou do 24 hodin.
-            </Text>
+            <Text style={text}>Ahoj {clientName},</Text>
 
             <Text style={text}>
-              Mezitím se můžete podívat na mé portfolio nebo si přečíst, jak
-              spolupráce se mnou probíhá:
+              Právě jsem pro vás připravila galerii{" "}
+              <strong style={strong}>{galleryTitle}</strong>. Podívejte se na
+              fotky v klientské zóně — přihlásíte se magickým odkazem na váš
+              e-mail, žádné heslo není potřeba.
             </Text>
 
-            <Section style={linksSection}>
-              <Link href={`${SITE_URL}/portfolio`} style={pillLink}>
-                Portfolio
-              </Link>
-              <Link href={`${SITE_URL}/sluzby-a-ceny`} style={pillLink}>
-                Služby a ceny
-              </Link>
-              <Link href={`${SITE_URL}/o-mne`} style={pillLink}>
-                O mně
-              </Link>
+            {galleryDescription && (
+              <Text style={description}>{galleryDescription}</Text>
+            )}
+
+            <Section style={buttonSection}>
+              <Button href={portalUrl} style={ctaButton}>
+                Otevřít galerii
+              </Button>
             </Section>
+
+            <Text style={fallback}>
+              Nefunguje tlačítko? Zkopírujte tento odkaz:
+            </Text>
+            <Text style={fallbackUrl}>
+              <Link href={portalUrl} style={link}>
+                {portalUrl}
+              </Link>
+            </Text>
 
             <Text style={signature}>
               S pozdravem,
@@ -144,28 +155,53 @@ const text = {
   margin: "0 0 12px",
 };
 
-const linksSection = {
-  textAlign: "center" as const,
-  margin: "20px 0 24px",
+const description = {
+  fontSize: "14px",
+  color: "#737373",
+  lineHeight: "1.6",
+  fontStyle: "italic" as const,
+  borderLeft: "3px solid #e8306d",
+  paddingLeft: "12px",
+  margin: "16px 0",
 };
 
-const pillLink = {
-  display: "inline-block",
-  margin: "4px 4px",
-  padding: "8px 16px",
+const buttonSection = {
+  textAlign: "center" as const,
+  margin: "28px 0 12px",
+};
+
+const ctaButton = {
+  backgroundColor: "#e8306d",
+  color: "#ffffff",
+  padding: "14px 32px",
   borderRadius: "999px",
-  backgroundColor: "#fef1f5",
-  color: "#e8306d",
-  fontSize: "13px",
+  fontSize: "14px",
   fontWeight: "600" as const,
   textDecoration: "none",
+  display: "inline-block",
+};
+
+const fallback = {
+  fontSize: "12px",
+  color: "#a3a3a3",
+  lineHeight: "1.5",
+  textAlign: "center" as const,
+  margin: "16px 0 4px",
+};
+
+const fallbackUrl = {
+  fontSize: "11px",
+  color: "#a3a3a3",
+  textAlign: "center" as const,
+  wordBreak: "break-all" as const,
+  margin: "0 0 16px",
 };
 
 const signature = {
   fontSize: "14px",
   color: "#737373",
   lineHeight: "1.7",
-  margin: "20px 0 8px",
+  margin: "16px 0 8px",
 };
 
 const strong = {

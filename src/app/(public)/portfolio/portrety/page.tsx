@@ -50,6 +50,7 @@ export default async function PortraitsPage() {
             src={gallery.cover_image_url ?? "/images/og-default.jpg"}
             alt={gallery.title}
             title={gallery.title}
+            externalUrl={gallery.external_url}
           />
         ))}
       </div>

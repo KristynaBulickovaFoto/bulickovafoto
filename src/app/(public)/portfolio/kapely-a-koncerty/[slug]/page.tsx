@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import Image from "next/image";
 import { notFound } from "next/navigation";
+import { ExternalLink } from "lucide-react";
 import { GalleryGrid } from "@/components/gallery/GalleryGrid";
 import { generatePageMetadata } from "@/lib/metadata";
 import { createClient } from "@/lib/supabase/server";
@@ -45,11 +47,13 @@ export default async function ConcertGalleryPage({ params }: Props) {
 
   if (!gallery) notFound();
 
-  const { data: images } = await supabase
-    .from("portfolio_images")
-    .select("*")
-    .eq("gallery_id", gallery.id)
-    .order("sort_order");
+  const { data: images } = gallery.external_url
+    ? { data: null }
+    : await supabase
+        .from("portfolio_images")
+        .select("*")
+        .eq("gallery_id", gallery.id)
+        .order("sort_order");
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-16">
@@ -77,7 +81,38 @@ export default async function ConcertGalleryPage({ params }: Props) {
         )}
       </div>
 
-      <GalleryGrid images={images ?? []} />
+      {gallery.external_url ? (
+        <div className="mx-auto max-w-3xl">
+          {gallery.cover_image_url && (
+            <div className="relative mb-8 aspect-[3/2] overflow-hidden rounded-2xl">
+              <Image
+                src={gallery.cover_image_url}
+                alt={gallery.title}
+                fill
+                sizes="(max-width: 1024px) 100vw, 768px"
+                className="object-cover"
+                priority
+              />
+            </div>
+          )}
+          <div className="text-center">
+            <a
+              href={gallery.external_url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-2 rounded-full bg-primary px-6 py-3 text-sm font-semibold text-primary-foreground shadow-sm transition-all hover:shadow-md"
+            >
+              Otevřít celou galerii
+              <ExternalLink className="h-4 w-4" />
+            </a>
+            <p className="mt-3 text-xs text-muted-foreground">
+              Galerie je hostovaná na externím úložišti (Zonerama)
+            </p>
+          </div>
+        </div>
+      ) : (
+        <GalleryGrid images={images ?? []} />
+      )}
     </div>
   );
 }

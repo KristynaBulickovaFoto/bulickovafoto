@@ -54,6 +54,7 @@ export default async function WeddingsPage() {
               [gallery.location, gallery.date].filter(Boolean).join(" • ") ||
               undefined
             }
+            externalUrl={gallery.external_url}
           />
         ))}
       </div>

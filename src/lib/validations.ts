@@ -33,6 +33,12 @@ export const portfolioGallerySchema = z.object({
   is_featured: z.boolean(),
   seo_title: z.string().optional(),
   seo_description: z.string().optional(),
+  external_url: z
+    .string()
+    .url("Neplatná URL")
+    .optional()
+    .or(z.literal("")),
+  cover_image_url: z.string().optional(),
 });
 
 export type PortfolioGalleryValues = z.infer<typeof portfolioGallerySchema>;

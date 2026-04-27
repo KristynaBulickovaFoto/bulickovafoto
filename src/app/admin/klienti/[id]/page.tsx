@@ -7,13 +7,16 @@ import {
   ArrowLeft,
   ExternalLink,
   Loader2,
+  Mail,
   Plus,
   Trash2,
+  Upload,
 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -32,6 +35,9 @@ import {
 } from "@/components/ui/select";
 import { createClient } from "@/lib/supabase/client";
 import type { Tables } from "@/lib/supabase/types";
+import { notifyClientGalleryReady } from "@/actions/client-galleries";
+
+const ZONERAMA_URL_REGEX = /^https?:\/\/(eu\.)?zonerama\.com\//i;
 
 type GalleryLink = {
   id: string;
@@ -65,6 +71,14 @@ export default function AdminClientDetailPage() {
   const [linkUrl, setLinkUrl] = useState("");
   const [linkType, setLinkType] = useState<"gallery" | "download" | "selection" | "other">("gallery");
   const [isSavingLink, setIsSavingLink] = useState(false);
+
+  // Bulk import dialog
+  const [bulkGalleryId, setBulkGalleryId] = useState<string | null>(null);
+  const [bulkText, setBulkText] = useState("");
+  const [isBulkImporting, setIsBulkImporting] = useState(false);
+
+  // Email send state (per-gallery)
+  const [notifyingId, setNotifyingId] = useState<string | null>(null);
 
   const supabase = createClient();
 
@@ -194,6 +208,120 @@ export default function AdminClientDetailPage() {
     setIsSavingLink(false);
   }
 
+  function applyZoneramaPreset() {
+    if (!linkLabel.trim()) setLinkLabel("Fotogalerie");
+    setLinkType("gallery");
+    if (!linkUrl.trim()) {
+      setLinkUrl("https://eu.zonerama.com/Link/Album/");
+    }
+  }
+
+  async function bulkImport() {
+    if (!bulkGalleryId) return;
+    const lines = bulkText
+      .split("\n")
+      .map((l) => l.trim())
+      .filter(Boolean);
+
+    if (lines.length === 0) {
+      toast.error("Vložte alespoň jeden odkaz.");
+      return;
+    }
+
+    const rows: { label: string; url: string }[] = [];
+    const invalid: string[] = [];
+
+    lines.forEach((line, idx) => {
+      // Accept "Label | URL" or just URL
+      const [rawLabel, rawUrl] = line.includes("|")
+        ? line.split("|").map((s) => s.trim())
+        : [null, line];
+      const url = rawUrl ?? line;
+
+      try {
+        new URL(url);
+      } catch {
+        invalid.push(line);
+        return;
+      }
+
+      rows.push({
+        label: rawLabel && rawLabel.length > 0 ? rawLabel : `Galerie ${idx + 1}`,
+        url,
+      });
+    });
+
+    if (invalid.length > 0) {
+      toast.error(`Neplatné URL: ${invalid.length} řádků přeskočeno.`);
+    }
+    if (rows.length === 0) {
+      return;
+    }
+
+    setIsBulkImporting(true);
+
+    const existingCount =
+      galleries.find((g) => g.id === bulkGalleryId)?.client_gallery_links
+        .length ?? 0;
+
+    const payload = rows.map((r, i) => ({
+      gallery_id: bulkGalleryId,
+      label: r.label,
+      url: r.url,
+      type: "gallery" as const,
+      sort_order: existingCount + i,
+    }));
+
+    const { data, error } = await supabase
+      .from("client_gallery_links")
+      .insert(payload)
+      .select();
+
+    if (error) {
+      toast.error("Nepodařilo se importovat odkazy.");
+    } else if (data) {
+      setGalleries((prev) =>
+        prev.map((g) =>
+          g.id === bulkGalleryId
+            ? {
+                ...g,
+                client_gallery_links: [
+                  ...g.client_gallery_links,
+                  ...(data as GalleryLink[]),
+                ],
+              }
+            : g
+        )
+      );
+      setBulkText("");
+      setBulkGalleryId(null);
+      toast.success(`Importováno ${data.length} odkazů.`);
+    }
+    setIsBulkImporting(false);
+  }
+
+  async function sendClientEmail(galleryId: string) {
+    setNotifyingId(galleryId);
+    const result = await notifyClientGalleryReady(galleryId);
+    if (result.success) {
+      if (result.alreadySent) {
+        toast.info("E-mail už byl odeslán dříve.");
+      } else {
+        toast.success("E-mail odeslán klientovi!");
+        setGalleries((prev) =>
+          prev.map((g) =>
+            g.id === galleryId
+              ? { ...g, notified_at: new Date().toISOString() }
+              : g
+          )
+        );
+      }
+    } else {
+      toast.error(result.error ?? "Nepodařilo se odeslat e-mail.");
+    }
+    setNotifyingId(null);
+  }
+
   async function deleteLink(galleryId: string, linkId: string) {
     if (!confirm("Opravdu smazat tento odkaz?")) return;
     const { error } = await supabase
@@ -287,6 +415,27 @@ export default function AdminClientDetailPage() {
                 <div className="flex items-center justify-between">
                   <CardTitle className="text-base">{gallery.title}</CardTitle>
                   <div className="flex items-center gap-2">
+                    {gallery.notified_at ? (
+                      <Badge variant="secondary" className="gap-1 text-xs">
+                        <Mail className="h-3 w-3" />
+                        Odesláno{" "}
+                        {new Date(gallery.notified_at).toLocaleDateString("cs")}
+                      </Badge>
+                    ) : (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => sendClientEmail(gallery.id)}
+                        disabled={notifyingId === gallery.id}
+                      >
+                        {notifyingId === gallery.id ? (
+                          <Loader2 className="mr-2 h-3 w-3 animate-spin" />
+                        ) : (
+                          <Mail className="mr-2 h-3 w-3" />
+                        )}
+                        Odeslat e-mail
+                      </Button>
+                    )}
                     <Badge
                       variant={
                         gallery.status === "active" ? "default" : "secondary"
@@ -356,15 +505,24 @@ export default function AdminClientDetailPage() {
                 ) : (
                   <p className="text-sm text-muted-foreground">Žádné odkazy</p>
                 )}
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="mt-3"
-                  onClick={() => setLinkGalleryId(gallery.id)}
-                >
-                  <Plus className="mr-2 h-3 w-3" />
-                  Přidat odkaz
-                </Button>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setLinkGalleryId(gallery.id)}
+                  >
+                    <Plus className="mr-2 h-3 w-3" />
+                    Přidat odkaz
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setBulkGalleryId(gallery.id)}
+                  >
+                    <Upload className="mr-2 h-3 w-3" />
+                    Hromadný import
+                  </Button>
+                </div>
               </CardContent>
             </Card>
           ))}
@@ -438,6 +596,16 @@ export default function AdminClientDetailPage() {
             <DialogTitle>Přidat odkaz</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
+            <Button
+              variant="outline"
+              size="sm"
+              type="button"
+              onClick={applyZoneramaPreset}
+              className="w-full justify-start"
+            >
+              <ExternalLink className="mr-2 h-3 w-3" />
+              Předvyplnit pro Zonerama
+            </Button>
             <div className="space-y-2">
               <Label htmlFor="link-label">Popis *</Label>
               <Input
@@ -453,8 +621,13 @@ export default function AdminClientDetailPage() {
                 id="link-url"
                 value={linkUrl}
                 onChange={(e) => setLinkUrl(e.target.value)}
-                placeholder="https://..."
+                placeholder="https://eu.zonerama.com/Link/Album/..."
               />
+              {linkUrl.trim() && !ZONERAMA_URL_REGEX.test(linkUrl) && (
+                <p className="text-xs text-muted-foreground">
+                  Není to Zonerama URL — uloží se jako běžný odkaz.
+                </p>
+              )}
             </div>
             <div className="space-y-2">
               <Label>Typ</Label>
@@ -477,6 +650,48 @@ export default function AdminClientDetailPage() {
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
               )}
               Přidat
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Bulk Import Dialog */}
+      <Dialog
+        open={!!bulkGalleryId}
+        onOpenChange={(open) => {
+          if (!open) {
+            setBulkGalleryId(null);
+            setBulkText("");
+          }
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Hromadný import odkazů</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="bulk-text">URL (jeden na řádek)</Label>
+              <Textarea
+                id="bulk-text"
+                value={bulkText}
+                onChange={(e) => setBulkText(e.target.value)}
+                placeholder={`https://eu.zonerama.com/Link/Album/15082002\nSvatební přípravy | https://eu.zonerama.com/Link/Album/...\nhttps://eu.zonerama.com/Link/Album/...`}
+                rows={8}
+                className="font-mono text-xs"
+              />
+              <p className="text-xs text-muted-foreground">
+                Volitelný formát: <code>Popisek | URL</code>. Bez popisku se
+                doplní &bdquo;Galerie 1, Galerie 2...&ldquo;
+              </p>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button onClick={bulkImport} disabled={isBulkImporting}>
+              {isBulkImporting && (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              )}
+              Importovat
             </Button>
           </DialogFooter>
         </DialogContent>

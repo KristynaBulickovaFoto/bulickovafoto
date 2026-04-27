@@ -1,7 +1,7 @@
 "use server";
 
 import { contactFormSchema, type ContactFormValues } from "@/lib/validations";
-import { createAdminClient } from "@/lib/supabase/admin";
+import { createClient } from "@/lib/supabase/server";
 
 export async function submitInquiry(
   data: ContactFormValues
@@ -17,7 +17,7 @@ export async function submitInquiry(
     return { success: true };
   }
 
-  const supabase = createAdminClient();
+  const supabase = await createClient();
 
   // Save to database
   const { error: dbError } = await supabase.from("inquiries").insert({

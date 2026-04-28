@@ -29,20 +29,19 @@ export function Hero() {
   const containerRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const accentRef = useRef<HTMLImageElement | null>(null);
-  const imagesRef = useRef<HTMLImageElement[]>([]);
+  const imagesRef = useRef<(HTMLImageElement | undefined)[]>([]);
   const currentFrameRef = useRef(0);
   const rafRef = useRef<number | null>(null);
+  const bgColorRef = useRef<string>("#ffffff");
+  const canvasSizeRef = useRef<{ width: number; height: number }>({ width: 0, height: 0 });
   const [isLoaded, setIsLoaded] = useState(false);
   const [scrollProgress, setScrollProgress] = useState(0);
 
-  const drawFrame = useCallback((frameIndex: number) => {
+  // Resize canvas (called on mount + window resize only — NOT on every draw)
+  const resizeCanvas = useCallback(() => {
     const canvas = canvasRef.current;
-    const ctx = canvas?.getContext("2d");
-    const img = imagesRef.current[frameIndex];
-    if (!canvas || !ctx || !img) return;
-
     const container = containerRef.current;
-    if (!container) return;
+    if (!canvas || !container) return;
 
     const dpr = window.devicePixelRatio || 1;
     const rect = container.querySelector(".sticky")?.getBoundingClientRect()
@@ -52,17 +51,26 @@ export function Hero() {
     canvas.height = rect.height * dpr;
     canvas.style.width = `${rect.width}px`;
     canvas.style.height = `${rect.height}px`;
-    ctx.scale(dpr, dpr);
 
-    const cw = rect.width;
-    const ch = rect.height;
+    const ctx = canvas.getContext("2d");
+    if (ctx) {
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
+      ctx.scale(dpr, dpr);
+    }
 
-    // Fill with background color matching the light theme
-    const bgColor = getComputedStyle(document.documentElement)
-      .getPropertyValue("--background")
-      .trim();
-    // Set to the CSS variable directly (it already includes oklch()), or fallback to white
-    ctx.fillStyle = bgColor || "#ffffff";
+    canvasSizeRef.current = { width: rect.width, height: rect.height };
+  }, []);
+
+  const drawFrame = useCallback((frameIndex: number) => {
+    const canvas = canvasRef.current;
+    const ctx = canvas?.getContext("2d");
+    const img = imagesRef.current[frameIndex];
+    if (!canvas || !ctx || !img || !img.complete) return;
+
+    const { width: cw, height: ch } = canvasSizeRef.current;
+    if (cw === 0 || ch === 0) return;
+
+    ctx.fillStyle = bgColorRef.current;
     ctx.fillRect(0, 0, cw, ch);
 
     // Contain-fit: show the whole image, centered
@@ -132,6 +140,15 @@ export function Hero() {
     }
   }, []);
 
+  // Cache bgColor + initial canvas size on mount
+  useEffect(() => {
+    const bg = getComputedStyle(document.documentElement)
+      .getPropertyValue("--background")
+      .trim();
+    bgColorRef.current = bg || "#ffffff";
+    resizeCanvas();
+  }, [resizeCanvas]);
+
   useEffect(() => {
     const accent = new Image();
     accent.src = DECORATIVE_ACCENT_PATH;
@@ -147,29 +164,52 @@ export function Hero() {
     };
   }, [drawFrame]);
 
-  // Preload all images
+  // Progressive image loading: frame 0 first → reveal UI → load rest in background
   useEffect(() => {
-    let loadedCount = 0;
-    const images: HTMLImageElement[] = [];
+    const images: (HTMLImageElement | undefined)[] = new Array(TOTAL_FRAMES);
+    let cancelled = false;
 
-    for (let i = 0; i < TOTAL_FRAMES; i++) {
-      const img = new Image();
-      img.src = getFrameSrc(i);
-      img.onload = () => {
-        loadedCount++;
-        if (loadedCount === TOTAL_FRAMES) {
-          setIsLoaded(true);
-          drawFrame(0);
-        }
+    // 1. Load frame 0 first with high priority — user sees this immediately
+    const firstFrame = new Image();
+    firstFrame.src = getFrameSrc(0);
+    firstFrame.onload = () => {
+      if (cancelled) return;
+      images[0] = firstFrame;
+      setIsLoaded(true);
+      drawFrame(0);
+      loadRemaining();
+    };
+    images[0] = firstFrame;
+
+    // 2. Load remaining frames in background, sequentially to avoid 144 parallel requests
+    const loadRemaining = () => {
+      let i = 1;
+      const loadNext = () => {
+        if (cancelled || i >= TOTAL_FRAMES) return;
+        const idx = i++;
+        const img = new Image();
+        img.src = getFrameSrc(idx);
+        img.onload = () => {
+          if (cancelled) return;
+          images[idx] = img;
+          // If user has already scrolled to this frame, paint it now
+          if (idx === currentFrameRef.current) drawFrame(idx);
+          loadNext();
+        };
+        img.onerror = loadNext;
+        images[idx] = img;
       };
-      images.push(img);
-    }
+      // Kick off 4 parallel chains so loading is faster than strict serial
+      // but doesn't saturate the connection like 144 parallel requests would
+      for (let p = 0; p < 4; p++) loadNext();
+    };
 
     imagesRef.current = images;
 
     return () => {
+      cancelled = true;
       images.forEach((img) => {
-        img.onload = null;
+        if (img) img.onload = null;
       });
     };
   }, [drawFrame]);
@@ -297,7 +337,7 @@ export function Hero() {
             {/* Intro paragraph & tags filling the empty space below the headline */}
             <div className="pointer-events-auto mt-5 flex max-w-lg flex-col items-center gap-3 sm:mt-6 sm:gap-4 lg:mt-10 lg:gap-6">
               <p
-                className="hidden text-sm font-medium leading-relaxed text-foreground/85 sm:block md:text-base lg:text-xl"
+                className="hidden text-base font-medium leading-relaxed text-foreground/85 sm:block md:text-lg lg:text-2xl"
                 style={{ textShadow: '0 0 20px rgba(255,255,255,1), 0 0 10px rgba(255,255,255,1)' }}
               >
                 Od nefalšovaných emocí na svatbách přes surovou energii kapel na pódiu až po opravdové rodinné portréty. Jsem flexibilní fotografka z Přerova.
@@ -334,6 +374,7 @@ export function Hero() {
           style={{
             opacity: subheadlineOpacity,
             transform: `translateY(${(1 - subheadlineOpacity) * 20}px)`,
+            pointerEvents: subheadlineOpacity > 0 ? "auto" : "none",
           }}
         >
           <div className="flex w-full mx-auto lg:mx-0 max-w-[22rem] flex-col items-center text-center gap-3 sm:max-w-lg sm:gap-4 lg:max-w-lg lg:gap-6">
@@ -350,7 +391,7 @@ export function Hero() {
 
             {/* About Me Story */}
             <div
-              className="flex flex-col gap-2 text-[12.5px] font-medium leading-[1.5] text-foreground/85 sm:gap-3 sm:text-[14px] lg:gap-4 lg:text-[15px] lg:leading-[1.6]"
+              className="flex flex-col gap-2 text-[14px] font-medium leading-[1.55] text-foreground/85 sm:gap-3 sm:text-[16px] lg:gap-4 lg:text-[17px] lg:leading-[1.65]"
               style={{ textShadow: '0 0 15px rgba(255,255,255,1)' }}
             >
               {/* Short version for mobile & tablet (< 1024px) */}

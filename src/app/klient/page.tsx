@@ -1,6 +1,8 @@
-import { Images, ExternalLink } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
+import Link from "next/link";
+import { Mail, Phone } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
+import { ClientGalleries } from "@/components/client/ClientGalleries";
+import { CONTACT } from "@/lib/constants";
 
 export const dynamic = "force-dynamic";
 
@@ -10,98 +12,72 @@ export default async function ClientDashboard() {
     data: { user },
   } = await supabase.auth.getUser();
 
-  const { data: galleries } = await supabase
-    .from("client_galleries")
-    .select("*, client_gallery_links(*)")
-    .eq("client_id", user?.id ?? "")
-    .eq("status", "active")
-    .order("created_at", { ascending: false });
+  const [{ data: profile }, { data: galleries }] = await Promise.all([
+    supabase
+      .from("profiles")
+      .select("full_name")
+      .eq("id", user?.id ?? "")
+      .single(),
+    supabase
+      .from("client_galleries")
+      .select("*, client_gallery_links(*)")
+      .eq("client_id", user?.id ?? "")
+      .order("created_at", { ascending: false }),
+  ]);
 
-  if (!galleries || galleries.length === 0) {
-    return (
-      <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-border/50 py-20">
-        <div className="flex h-14 w-14 items-center justify-center rounded-full bg-primary/10">
-          <Images className="h-7 w-7 text-primary" />
-        </div>
-        <p className="mt-4 font-medium text-foreground">
-          Zatím žádné galerie
-        </p>
-        <p className="mt-1 max-w-xs text-center text-sm text-muted-foreground">
-          Jakmile budou vaše fotky připravené, galerie se zde automaticky zobrazí.
-        </p>
-      </div>
-    );
-  }
+  const firstName = profile?.full_name?.split(" ")[0] ?? "klient";
+  const list = (galleries ?? []) as Parameters<
+    typeof ClientGalleries
+  >[0]["galleries"];
+  const activeCount = list.filter((g) => g.status === "active").length;
 
   return (
-    <div className="grid gap-4 sm:grid-cols-2">
-      {galleries.map((gallery) => {
-        const links = gallery.client_gallery_links as Array<{
-          id: string;
-          label: string;
-          url: string;
-          type: string;
-          sort_order: number;
-        }>;
+    <div className="space-y-10">
+      <div>
+        <span className="mb-3 inline-block h-1 w-12 rounded-full bg-primary" />
+        <h1 className="font-display text-4xl font-bold tracking-tight sm:text-5xl">
+          Vítejte, <span className="text-primary">{firstName}</span>
+        </h1>
+        <p className="mt-2 text-sm text-muted-foreground">
+          {activeCount > 0
+            ? `${activeCount} ${plural(activeCount, "galerie", "galerie", "galerií")} připravená k prohlédnutí`
+            : "Galerie se zobrazí, jakmile budou fotky připravené"}
+        </p>
+      </div>
 
-        return (
-          <div
-            key={gallery.id}
-            className="group rounded-2xl border border-border/40 bg-card p-5 shadow-[0_1px_8px_-2px_rgba(0,0,0,0.04)] transition-shadow hover:shadow-md sm:p-6"
-          >
-            {/* Gallery header */}
-            <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/10">
-                <Images className="h-5 w-5 text-primary" />
-              </div>
-              <div>
-                <h2 className="font-semibold text-foreground">
-                  {gallery.title}
-                </h2>
-                {gallery.description && (
-                  <p className="text-xs text-muted-foreground">
-                    {gallery.description}
-                  </p>
-                )}
-              </div>
-            </div>
+      <ClientGalleries galleries={list} />
 
-            {/* Links */}
-            {links && links.length > 0 ? (
-              <ul className="mt-4 space-y-2">
-                {links
-                  .sort((a, b) => a.sort_order - b.sort_order)
-                  .map((link) => (
-                    <li key={link.id}>
-                      <a
-                        href={link.url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="flex items-center gap-3 rounded-xl border border-border/30 bg-muted/30 px-4 py-3 text-sm transition-all hover:border-primary/30 hover:bg-primary/5 hover:text-primary"
-                      >
-                        <ExternalLink className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
-                        <span className="flex-1 font-medium">{link.label}</span>
-                        <Badge variant="secondary" className="text-[10px]">
-                          {link.type === "gallery"
-                            ? "Galerie"
-                            : link.type === "download"
-                              ? "Ke stažení"
-                              : link.type === "selection"
-                                ? "Výběr"
-                                : "Odkaz"}
-                        </Badge>
-                      </a>
-                    </li>
-                  ))}
-              </ul>
-            ) : (
-              <p className="mt-4 text-sm text-muted-foreground">
-                Odkazy budou brzy k dispozici.
-              </p>
-            )}
-          </div>
-        );
-      })}
+      <div className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2 border-t border-border/40 pt-8 text-xs text-muted-foreground">
+        <span>Potřebujete něco?</span>
+        <a
+          href={`mailto:${CONTACT.email}`}
+          className="inline-flex items-center gap-1.5 font-medium transition-colors hover:text-primary"
+        >
+          <Mail className="h-3.5 w-3.5 text-primary" />
+          {CONTACT.email}
+        </a>
+        <span className="h-1 w-1 rounded-full bg-foreground/20" />
+        <a
+          href={`tel:${CONTACT.phone.replace(/\s/g, "")}`}
+          className="inline-flex items-center gap-1.5 font-medium transition-colors hover:text-primary"
+        >
+          <Phone className="h-3.5 w-3.5 text-primary" />
+          {CONTACT.phone}
+        </a>
+        <span className="h-1 w-1 rounded-full bg-foreground/20" />
+        <Link
+          href="/kontakt"
+          className="font-medium transition-colors hover:text-primary"
+        >
+          Napsat zprávu
+        </Link>
+      </div>
     </div>
   );
+}
+
+function plural(n: number, one: string, few: string, many: string) {
+  if (n === 1) return one;
+  if (n >= 2 && n <= 4) return few;
+  return many;
 }

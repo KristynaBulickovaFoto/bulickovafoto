@@ -1,6 +1,8 @@
 import Link from "next/link";
-import { format, addDays, startOfDay } from "date-fns";
+import { format, addDays, startOfDay, subDays, differenceInDays } from "date-fns";
 import { cs } from "date-fns/locale";
+import { ActivityFeed, type FeedItem } from "@/components/admin/ActivityFeed";
+import { SiteHealth, type HealthIssue } from "@/components/admin/SiteHealth";
 import {
   Card,
   CardContent,
@@ -40,6 +42,10 @@ export default async function AdminDashboard() {
   const todayStr = format(today, "yyyy-MM-dd");
   const in90 = format(addDays(today, 90), "yyyy-MM-dd");
 
+  const threeDaysAgo = subDays(today, 3).toISOString();
+  const fourteenDaysAgo = subDays(today, 14).toISOString();
+  const oneDayAgo = subDays(today, 1).toISOString();
+
   const [
     { count: inquiryCount },
     { count: newInquiryCount },
@@ -58,6 +64,15 @@ export default async function AdminDashboard() {
     { data: recentInquiries },
     { data: upcomingDates },
     { data: recentClientGalleries },
+    { data: staleInquiries },
+    { data: pendingGalleries },
+    { data: oldDrafts },
+    { data: portfolioMissingCovers },
+    { data: feedInquiries },
+    { data: feedGalleries },
+    { data: feedBlog },
+    { data: feedBookings },
+    { data: settings },
   ] = await Promise.all([
     supabase.from("inquiries").select("*", { count: "exact", head: true }),
     supabase
@@ -115,12 +130,190 @@ export default async function AdminDashboard() {
       .select("id, title, status, notified_at, created_at, client_id")
       .order("created_at", { ascending: false })
       .limit(4),
+    supabase
+      .from("inquiries")
+      .select("id, name, created_at")
+      .in("status", ["new", "read"])
+      .lte("created_at", threeDaysAgo)
+      .order("created_at", { ascending: true })
+      .limit(10),
+    supabase
+      .from("client_galleries")
+      .select("id, title, client_id, created_at")
+      .is("notified_at", null)
+      .lte("created_at", oneDayAgo)
+      .limit(10),
+    supabase
+      .from("blog_posts")
+      .select("id, title, updated_at")
+      .eq("is_published", false)
+      .lte("updated_at", fourteenDaysAgo)
+      .limit(10),
+    supabase
+      .from("portfolio_galleries")
+      .select("id, title")
+      .eq("is_published", true)
+      .is("cover_image_url", null)
+      .limit(10),
+    supabase
+      .from("inquiries")
+      .select("id, name, email, status, created_at")
+      .order("created_at", { ascending: false })
+      .limit(8),
+    supabase
+      .from("client_galleries")
+      .select("id, title, client_id, notified_at, created_at")
+      .order("created_at", { ascending: false })
+      .limit(6),
+    supabase
+      .from("blog_posts")
+      .select("id, title, is_published, published_at, created_at")
+      .order("created_at", { ascending: false })
+      .limit(4),
+    supabase
+      .from("booked_dates")
+      .select("id, date, label, created_at")
+      .gte("date", todayStr)
+      .order("created_at", { ascending: false })
+      .limit(4),
+    supabase
+      .from("site_settings")
+      .select("phone, email, about_text, hero_headline, hero_image_url")
+      .eq("id", 1)
+      .maybeSingle(),
   ]);
 
   const statusCounts = INQUIRY_STATUSES.map((s) => ({
     ...s,
     count: inquiriesByStatus?.filter((i) => i.status === s.value).length ?? 0,
   }));
+
+  const now = new Date();
+  const issues: HealthIssue[] = [];
+
+  for (const i of staleInquiries ?? []) {
+    issues.push({
+      id: `stale-inq-${i.id}`,
+      severity: "high",
+      icon: "mail",
+      title: `Poptávka od ${i.name} čeká ${differenceInDays(now, new Date(i.created_at))} dní`,
+      detail: "Odpověz nebo archivuj",
+      href: `/admin/poptavky?id=${i.id}`,
+    });
+  }
+  for (const g of pendingGalleries ?? []) {
+    issues.push({
+      id: `pending-gal-${g.id}`,
+      severity: "high",
+      icon: "send",
+      title: `Galerie ${g.title} ještě nebyla odeslána`,
+      detail: `Klientovi vytvořeno ${differenceInDays(now, new Date(g.created_at))} dní zpět`,
+      href: `/admin/klienti/${g.client_id}`,
+    });
+  }
+  for (const p of portfolioMissingCovers ?? []) {
+    issues.push({
+      id: `cover-${p.id}`,
+      severity: "medium",
+      icon: "image",
+      title: `Portfolio "${p.title}" nemá obálkový obrázek`,
+      href: `/admin/portfolio/${p.id}`,
+    });
+  }
+  for (const d of oldDrafts ?? []) {
+    issues.push({
+      id: `draft-${d.id}`,
+      severity: "low",
+      icon: "file",
+      title: `Starý koncept blogu: ${d.title}`,
+      detail: `Naposledy upraveno ${differenceInDays(now, new Date(d.updated_at))} dní zpět`,
+      href: `/admin/blog/${d.id}`,
+    });
+  }
+  if (settings) {
+    if (!settings.about_text) {
+      issues.push({
+        id: "no-about",
+        severity: "low",
+        icon: "file",
+        title: "Chybí text 'O mně' v nastavení",
+        href: "/admin/nastaveni",
+      });
+    }
+    if (!settings.hero_image_url) {
+      issues.push({
+        id: "no-hero",
+        severity: "low",
+        icon: "image",
+        title: "Chybí hero obrázek",
+        href: "/admin/nastaveni",
+      });
+    }
+    if (!settings.phone || !settings.email) {
+      issues.push({
+        id: "no-contact",
+        severity: "medium",
+        icon: "mail",
+        title: "Chybí kontaktní údaje (telefon nebo e-mail)",
+        href: "/admin/nastaveni",
+      });
+    }
+  }
+
+  const feed: FeedItem[] = [];
+  for (const i of feedInquiries ?? []) {
+    const isUrgent =
+      (i.status === "new" || i.status === "read") &&
+      differenceInDays(now, new Date(i.created_at)) >= 2;
+    feed.push({
+      id: `inq-${i.id}`,
+      type: "inquiry",
+      title:
+        i.status === "new"
+          ? `Nová poptávka od ${i.name}`
+          : `Poptávka: ${i.name}`,
+      subtitle: i.email,
+      href: `/admin/poptavky?id=${i.id}`,
+      timestamp: i.created_at,
+      isUrgent,
+    });
+  }
+  for (const g of feedGalleries ?? []) {
+    feed.push({
+      id: `gal-${g.id}`,
+      type: "gallery",
+      title: g.notified_at
+        ? `Galerie odeslána: ${g.title}`
+        : `Nová galerie: ${g.title}`,
+      subtitle: g.notified_at ? undefined : "Čeká na odeslání",
+      href: `/admin/klienti/${g.client_id}`,
+      timestamp: g.notified_at ?? g.created_at,
+      isUrgent:
+        !g.notified_at && differenceInDays(now, new Date(g.created_at)) >= 1,
+    });
+  }
+  for (const b of feedBlog ?? []) {
+    feed.push({
+      id: `blog-${b.id}`,
+      type: "blog",
+      title: b.is_published
+        ? `Publikováno: ${b.title}`
+        : `Koncept: ${b.title}`,
+      href: `/admin/blog/${b.id}`,
+      timestamp: b.published_at ?? b.created_at,
+    });
+  }
+  for (const bk of feedBookings ?? []) {
+    feed.push({
+      id: `bk-${bk.id}`,
+      type: "booking",
+      title: `Volný termín ${format(new Date(bk.date + "T00:00:00"), "d. M. yyyy", { locale: cs })}`,
+      subtitle: bk.label ?? undefined,
+      href: "/admin/kalendar",
+      timestamp: bk.created_at,
+    });
+  }
+  feed.sort((a, b) => b.timestamp.localeCompare(a.timestamp));
 
   const stats = [
     {
@@ -267,6 +460,22 @@ export default async function AdminDashboard() {
             <p className="mt-1 text-[11px] text-muted-foreground">{stat.hint}</p>
           </Link>
         ))}
+      </div>
+
+      {/* Health + Activity row */}
+      <div className="grid gap-4 lg:grid-cols-2">
+        <SiteHealth issues={issues} />
+        <Card>
+          <CardHeader className="flex-row items-center justify-between">
+            <div>
+              <CardTitle>Aktivita</CardTitle>
+              <CardDescription>Co se naposledy stalo</CardDescription>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <ActivityFeed items={feed.slice(0, 10)} />
+          </CardContent>
+        </Card>
       </div>
 
       {/* Two columns: inquiries + upcoming dates */}
